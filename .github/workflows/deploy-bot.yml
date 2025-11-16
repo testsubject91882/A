@@ -1,0 +1,57 @@
+name: Keep Bot Alive
+
+on:
+  schedule:
+    # Run every 6 hours to keep bot alive
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  keep-alive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r TeraBoxAPIService/requirements.txt
+    
+    - name: Create .env file
+      run: |
+        cat > TeraBoxAPIService/.env << EOF
+        BOT_TOKEN=${{ secrets.BOT_TOKEN }}
+        API_ID=${{ secrets.API_ID }}
+        API_HASH=${{ secrets.API_HASH }}
+        MONGO_URI=${{ secrets.MONGO_URI }}
+        MONGO_DB=${{ secrets.MONGO_DB }}
+        ADMIN_IDS=${{ secrets.ADMIN_IDS }}
+        API_URL=${{ secrets.API_URL }}
+        TERA_BASE_API=https://teraapi.boogafantastic.workers.dev
+        EOF
+    
+    - name: Run bot for 5 hours
+      run: |
+        timeout 18000 python -m TeraBoxAPIService.bot.main || true
+    
+    - name: Trigger next run
+      if: always()
+      uses: actions/github-script@v6
+      with:
+        script: |
+          github.rest.actions.createWorkflowDispatch({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            workflow_id: 'deploy-bot.yml',
+            ref: 'main'
+          })
+
