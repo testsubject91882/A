@@ -3,6 +3,7 @@ services:
     name: terabox-api
     runtime: docker
     dockerfilePath: ./Dockerfile
+    healthCheckPath: /docs
     port: 8000
     autoDeploy: true
     envVars:
